@@ -11,6 +11,18 @@ export class PrismaOrderRepository implements IOrderRepository {
     private prisma: PrismaClient
   ) {}
 
+  async findById(id: number): Promise<Order | null> {
+    const row = await this.prisma.order.findUnique({ where: { id } });
+    if (!row) return null;
+    return {
+      id: row.id,
+      customer: row.customer,
+      items: JSON.parse(row.items) as OrderLine[],
+      total: row.total,
+      status: row.status
+    };
+  }
+
   async create(
     customer: string,
     items: OrderLine[],

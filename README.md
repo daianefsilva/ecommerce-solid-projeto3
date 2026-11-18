@@ -1,159 +1,107 @@
-# E-commerce SOLID — Projeto 2
+# E-commerce - Projeto 3
 
-Este é o e-commerce do Projeto 1 já refatorado (SRP, OCP e LSP). Ele é o ponto de partida deste trabalho.
+Continuação do Projeto 2: https://github.com/daianefsilva/ecommerce-solid-projeto2
+
+Enunciado: https://github.com/maikonb/p3-ecommerce-docker
+
+API Express e TypeScript com InversifyJS, PostgreSQL e Docker Compose.
+A consulta de pedido segue Controller -> Service -> IOrderRepository.
 
 ## Como rodar
 
-```bash
-npm install
-npm run prisma:migrate
-npm run prisma:seed
-npm run dev
-```
+Instale e abra o Docker Desktop com suporte a containers Linux e Docker Compose.
+Na pasta do projeto, copie a configuração:
 
-A API sobe em `http://localhost:3000`. Teste com:
-
-```bash
-curl -X POST http://localhost:3000/orders \
--H "Content-Type: application/json" \
--d '{
-  "customer": "cliente@ethereal.email",
-  "items": [{ "productId": 1, "quantity": 1 }],
-  "paymentMethod": "credit_card",
-  "paymentDetails": { "cardNumber": "1234567812345678", "cvv": "123" }
-}'
-```
-
-Produto `1` é o livro físico (R$ 100 + R$ 10 de frete), produto `2` é o e-book (R$ 50, sem frete). Formas de pagamento: `credit_card`, `debit_card` e `pix`.
-
-## Estrutura
-
-```
-src/
-├── domain/        # produtos, pedido e erros de negócio
-├── repositories/  # IOrderRepository, IProductRepository e as versões Prisma
-├── providers/     # IMailProvider e EtherealMailProvider
-├── payments/      # IPaymentMethod, uma classe por forma de pagamento e o registro
-├── services/      # OrderService e NotificationService
-├── controllers/   # OrderController: só HTTP
-└── app.ts         # monta as dependências na mão
-```
-
-Os services recebem tudo pelo construtor, e as classes concretas só aparecem no `app.ts`.
-
----
-
-## Trabalho
-
-Hoje a montagem é feita na mão, com `new`, no `app.ts`. Troque isso por um container de IoC, o **InversifyJS**, e prove que a infraestrutura pode ser trocada sem tocar na regra de negócio.
-
-### 1. Configure o Inversify
-
-```bash
-npm install inversify@7 reflect-metadata
-```
-
-No `tsconfig.json`, em `compilerOptions`: `"experimentalDecorators": true` e `"emitDecoratorMetadata": true`.
-Na primeira linha do `src/server.ts`: `import 'reflect-metadata';`
-
-> Use a versão 7. A 8 não compila com este `tsconfig`.
-
-### 2. Registre as dependências
-
-* Crie `src/container/types.ts` com um `Symbol` para cada dependência (`TYPES.MailProvider`, `TYPES.OrderRepository`...).
-* Coloque `@injectable()` em toda classe que entra no container.
-* Coloque `@inject(TYPES.X)` em **todo** parâmetro de construtor, inclusive os de classe concreta.
-
-> O projeto roda com `tsx`, que não gera metadados de tipo. Sem o `@inject` em cada parâmetro, a aplicação cai com `Found unexpected missing metadata`.
-
-* As formas de pagamento são registradas todas com o mesmo identificador e chegam ao `PaymentMethodRegistry` por `@multiInject(TYPES.PaymentMethod)`.
-* Provider de e-mail e repositórios são singleton (`inSingletonScope()`).
-
-### 3. Crie um segundo modo de execução
-
-Instale o `dotenv`, importe `dotenv/config` no `server.ts` e copie o `.env.example` para `.env`. O container lê o `APP_ENV` e decide o que injetar:
-
-| | `APP_ENV=dev` | `APP_ENV=test` |
-|---|---|---|
-| E-mail | `EtherealMailProvider` | `ConsoleMailProvider`, que imprime o e-mail no console |
-| Pedidos | `PrismaOrderRepository` | `InMemoryOrderRepository`, que guarda os pedidos num array |
-
-As duas classes do modo `test` são suas. Nesse modo, a aplicação tem de funcionar **sem internet**.
-### 4. Monte tudo num lugar só
-
-`src/container/container.ts` passa a ser o **único arquivo** que importa classes concretas e faz `new` de repositório, provider, pagamento, service ou controller. O `app.ts` só pede o `OrderController` ao container e registra a rota.
-
-### Critérios de aceite
-
-1. Clonar, instalar, migrar, popular e rodar funcionam sem erro.
-2. Os produtos `1` e `2` dão o total certo nos dois modos.
-3. Trocar de modo exige mudar só o `APP_ENV`.
-4. A escolha do modo acontece só no `container.ts`: nenhum arquivo de `services/` ou `controllers/` lê o `APP_ENV` nem importa Prisma, Nodemailer ou uma implementação de repositório, provider ou pagamento.
-5. Uma seção **"Como rodar"** no seu README explica os dois modos.
-
-### Entrega
-
-Pelo git. Informe na caixa de texto do AVA o link do repositório. Ele não pode estar privado: teste antes de entregar.
-
-## Configuração e execução do Projeto 2
-
-Projeto baseado no código inicial de:
-https://github.com/maikonb/ecommerce-solid-inicial
-
-### Preparação
-
-```bash
-npm install
-```
-
-Copie `.env.example` para `.env`.
-
-No PowerShell:
+PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
+docker compose up --build
 ```
 
-Prepare o banco local e cadastre os produtos:
+Linux/macOS:
 
 ```bash
-npm run prisma:migrate
-npm run prisma:seed
+cp .env.example .env
+docker compose up --build
 ```
 
-### Modos de execução
+A API atende em http://localhost:3000. O serviço banco tem healthcheck,
+e a API só inicia após o PostgreSQL estar pronto. O comando npm start
+cria as tabelas com prisma db push, cadastra os produtos de forma idempotente
+e inicia o servidor. Não é necessário instalar Node.js no computador anfitrião.
 
-Configure no arquivo `.env`:
+## Configuração
 
-- `APP_ENV=dev`: pedidos no SQLite via Prisma e e-mail pelo Ethereal.
-- `APP_ENV=test`: pedidos em memória e e-mail no console.
+O .env.example contém:
 
-Nos dois modos, os produtos são consultados no SQLite local.
-Após instalar as dependências e preparar o banco, o modo test
-funciona sem internet. Os pedidos em memória são perdidos ao reiniciar.
-
-A escolha das implementações acontece em `src/container/container.ts`.
-Para trocar de modo, altere somente APP_ENV e reinicie o servidor.
-
-### Iniciar a API
-
-```bash
-npm run dev
+```dotenv
+APP_ENV=dev
+DATABASE_URL=postgresql://ecommerce:ecommerce@banco:5432/ecommerce
 ```
 
-Endereço: http://localhost:3000
-Rota: POST /orders
+O endereço banco é o nome do serviço dentro da rede do Compose.
+O PostgreSQL não publica sua porta no computador anfitrião.
+As credenciais são destinadas somente ao ambiente didático local.
 
-### Verificação do TypeScript
+- dev: produtos e pedidos no PostgreSQL, e-mail Ethereal (precisa de internet).
+- test: produtos no PostgreSQL, pedidos em memória e e-mail no console.
+  Pedidos em memória desaparecem ao reiniciar a API.
 
-```bash
-npx tsc --noEmit
+Para trocar de modo, altere APP_ENV no .env e execute:
+
+```powershell
+docker compose up -d --force-recreate api
 ```
 
-### Testes manuais realizados
+## Testar no PowerShell
 
-- Produto 1: uma unidade, total de R$ 110 com frete.
-- Produto 2: uma unidade, total de R$ 50 sem frete.
-- Ambos os produtos testados nos modos dev e test.
-- No modo dev, a resposta inclui o link do Ethereal.
-- No modo test, emailPreview é null e o e-mail aparece no console.
+Crie um pedido físico de R$ 110:
+
+```powershell
+$pedido = @{
+  customer = "cliente@ethereal.email"
+  items = @(@{ productId = 1; quantity = 1 })
+  paymentMethod = "pix"
+} | ConvertTo-Json -Depth 5
+
+$resposta = Invoke-RestMethod -Uri "http://localhost:3000/orders" -Method Post -ContentType "application/json" -Body $pedido
+$resposta | Format-List
+Invoke-RestMethod -Uri ("http://localhost:3000/orders/" + $resposta.orderId)
+```
+
+Para e-book, use productId = 2: uma unidade resulta em R$ 50, sem frete.
+GET /orders/:id também pode ser aberto no navegador.
+Um ID inexistente retorna 404. ID inválido retorna 400.
+
+```powershell
+curl.exe -i http://localhost:3000/orders/999999
+```
+
+Teste os dois produtos e a consulta nos modos dev e test.
+
+## Persistência
+
+No modo dev, anote o orderId de um pedido e execute:
+
+```powershell
+docker compose down
+docker compose up -d
+```
+
+Consulte novamente o mesmo pedido. Ele continua no volume dados_postgres.
+O seed não apaga os pedidos e conserva os produtos 1 e 2.
+Não use docker compose down -v ao verificar persistência: -v remove o volume.
+Essa persistência de pedidos não se aplica ao modo test, que usa memória.
+
+## Estrutura
+
+- compose.yaml: PostgreSQL, healthcheck, volume e API.
+- Dockerfile / .dockerignore: imagem da API.
+- prisma/schema.prisma: provider PostgreSQL e DATABASE_URL.
+- src/container: composição das dependências e escolha do modo.
+- src/controllers: entrada HTTP, sem acesso a repositórios.
+- src/services: regra de pedido inexistente.
+- src/repositories: findById nas versões Prisma e memória.
+
+As migrações antigas de SQLite foram removidas. O projeto usa prisma db push.

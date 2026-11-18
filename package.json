@@ -1,13 +1,14 @@
 {
   "name": "ecommerce-legacy-solid",
   "version": "1.0.0",
-  "description": "Projeto legado para refatoração SOLID",
+  "description": "Projeto legado para refatora\u00e7\u00e3o SOLID",
   "main": "src/server.ts",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "start": "prisma db push && tsx prisma/seed.ts && tsx src/server.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",

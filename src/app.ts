@@ -11,5 +11,6 @@ const orderController = container.get<OrderController>(
 );
 
 app.post('/orders', orderController.processOrder);
+app.get('/orders/:id', orderController.findById);
 
 export default app;

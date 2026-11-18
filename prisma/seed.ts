@@ -7,6 +7,7 @@ async function main() {
     where: { id: 1 },
     update: {},
     create: {
+      id: 1,
       name: 'O Programador Pragmático (Livro Físico)',
       type: 'physical',
       price: 100.0,
@@ -17,6 +18,7 @@ async function main() {
     where: { id: 2 },
     update: {},
     create: {
+      id: 2,
       name: 'Clean Code (E-book)',
       type: 'digital',
       price: 50.0,

@@ -7,6 +7,10 @@ export class InMemoryOrderRepository implements IOrderRepository {
   private orders: Order[] = [];
   private nextId = 1;
 
+  async findById(id: number): Promise<Order | null> {
+    return this.orders.find((order) => order.id === id) ?? null;
+  }
+
   async create(
     customer: string,
     items: OrderLine[],

@@ -1,7 +1,7 @@
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
 import logger from '../lib/logger';
-import { ValidationError } from '../domain/errors';
+import { NotFoundError, ValidationError } from '../domain/errors';
 import { OrderItem, OrderLine } from '../domain/Order';
 import { ProductFactory } from '../domain/ProductFactory';
 import { IProductRepository } from '../repositories/IProductRepository';
@@ -24,6 +24,15 @@ export class OrderService {
     @inject(TYPES.NotificationService)
     private notification: NotificationService,
   ) {}
+
+  async findById(id: number) {
+    if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) {
+      throw new ValidationError('ID deve ser um inteiro positivo válido');
+    }
+    const order = await this.orders.findById(id);
+    if (!order) throw new NotFoundError(`Pedido ${id} não encontrado`);
+    return order;
+  }
 
   async placeOrder(
     customer: string,
